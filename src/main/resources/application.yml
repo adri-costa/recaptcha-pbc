@@ -1,0 +1,11 @@
+recaptcha:
+  project-id: ${RECAPTCHA_PROJECT_ID}
+  site-key: ${RECAPTCHA_SITE_KEY}
+  api-key: ${RECAPTCHA_API_KEY}
+  timeout-ms: 15000
+  expected-hostname: ${RECAPTCHA_EXPECTED_HOSTNAME:localhost}
+  trust-proxy-headers: false
+  annotations-enabled: false
+
+server:
+  forward-headers-strategy: framework

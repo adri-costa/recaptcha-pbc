@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>reCAPTCHA Enterprise Policy-Based Challenge Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      --bg: #f7f9fc;
+      --panel: #ffffff;
+      --border: #d9e1ec;
+      --text: #1f2937;
+      --muted: #5b6472;
+      --accent: #0057b8;
+      --danger: #b42318;
+      --success: #027a48;
+    }
+
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #eef4ff 0%, var(--bg) 100%);
+      color: var(--text);
+    }
+
+    .shell {
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 16px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
+    }
+
+    h1 {
+      margin-top: 0;
+      font-size: 1.8rem;
+    }
+
+    p, li {
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    form {
+      display: grid;
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-weight: 600;
+    }
+
+    input {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 1rem;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      background: var(--accent);
+      color: #fff;
+      padding: 12px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      white-space: pre-wrap;
+    }
+
+    .status.success {
+      border-color: #a6f4c5;
+      color: var(--success);
+      background: #ecfdf3;
+    }
+
+    .status.error {
+      border-color: #fecdca;
+      color: var(--danger);
+      background: #fef3f2;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <h1>reCAPTCHA - Policy-Based Challenge</h1>
+      <p>
+        Esta aplicação mostra o padrão WEB recomendado para uso
+        de chave com desafio baseado em política: gere o token no
+        navegador, crie o assessment no backend, valide a ação e deixe o
+        backend decidir se a solicitação é permitida.
+      </p>
+      <ul>
+        <li>A chave reCAPTCHA (site key) é pública e pode ficar exposta.</li>
+        <li>A chave API (secret key) deve ficar no backend de forma restrita.</li>
+        <li>O backend deve criar o assessment dentro de 2 minutos (expiração do token).</li>
+      </ul>
+
+      <form id="loginForm" novalidate>
+        <label>
+          Usuário
+          <input id="username" name="username" type="text" autocomplete="username" required>
+        </label>
+
+        <label>
+          Senha
+          <input id="password" name="password" type="password" autocomplete="current-password" required>
+        </label>
+
+        <button
+          id="submitButton"
+          class="g-recaptcha"
+          type="button"
+          disabled
+        >
+          Acessar
+        </button>
+      </form>
+
+      <div id="status" class="status">Carregando configuração do reCAPTCHA...</div>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById("loginForm");
+    const submitButton = document.getElementById("submitButton");
+    const statusBox = document.getElementById("status");
+
+    let recaptchaConfig = null;
+
+    function setStatus(message, type) {
+      statusBox.textContent = message;
+      statusBox.className = "status" + (type ? " " + type : "");
+    }
+
+    function loadRecaptchaScript(siteKey) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = "https://www.google.com/recaptcha/enterprise.js?render=" + encodeURIComponent(siteKey);
+        script.async = true;
+        script.defer = true;
+        script.onload = resolve;
+        script.onerror = () => reject(new Error("Falha ao carregar o script do reCAPTCHA Enterprise."));
+        document.head.appendChild(script);
+      });
+    }
+
+    async function loadConfiguration() {
+      const response = await fetch("/api/recaptcha/config", {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+        credentials: "same-origin"
+      });
+
+      if (!response.ok) {
+        throw new Error("Falha ao carregar a configuração pública do reCAPTCHA.");
+      }
+
+      recaptchaConfig = await response.json();
+      submitButton.dataset.sitekey = recaptchaConfig.siteKey;
+      submitButton.dataset.action = recaptchaConfig.loginAction;
+      submitButton.dataset.callback = "onRecaptchaSubmit";
+
+      await loadRecaptchaScript(recaptchaConfig.siteKey);
+      submitButton.disabled = false;
+
+      setStatus(
+        "Ambiente pronto. Este exemplo usa action '" + recaptchaConfig.loginAction + "' e envia o token para o backend executar o assessment.",
+        ""
+      );
+    }
+
+    window.onRecaptchaSubmit = async function(token) {
+      try {
+        setStatus("Enviando solicitação de login para verificação no backend...", "");
+
+        const response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value,
+            recaptchaToken: token
+          })
+        });
+
+        const payload = await response.json();
+        const suffix = payload.assessmentId ? "\nassessmentId: " + payload.assessmentId : "";
+
+        if (!response.ok) {
+          setStatus(payload.message + suffix, "error");
+          return;
+        }
+
+        setStatus(payload.message + suffix, "success");
+      } catch (error) {
+        setStatus(error.message || "Erro inesperado ao enviar a solicitação.", "error");
+      }
+    };
+
+    submitButton.addEventListener("click", (event) => {
+      if (!form.reportValidity()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return;
+      }
+
+      if (!window.grecaptcha || !window.grecaptcha.enterprise) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        setStatus("reCAPTCHA ainda não está pronto.", "error");
+        return;
+      }
+
+      setStatus("Aguardando avaliação do desafio baseado em políticas...", "");
+    }, true);
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+
+      if (!form.reportValidity()) {
+          return;
+      }
+
+      if (!window.grecaptcha || !window.grecaptcha.enterprise) {
+        setStatus("reCAPTCHA ainda não está pronto.", "error");
+        return;
+      }
+
+      setStatus("Aguardando avaliação do desafio baseado em políticas...", "");
+      submitButton.click();
+    });
+
+    loadConfiguration().catch((error) => {
+      setStatus(error.message || "Falha ao inicializar a página.", "error");
+    });
+  </script>
+</body>
+</html>
