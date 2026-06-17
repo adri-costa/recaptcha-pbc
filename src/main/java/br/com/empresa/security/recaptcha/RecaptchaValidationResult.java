@@ -6,6 +6,7 @@ public record RecaptchaValidationResult(
         Double score,
         String challenge,
         String returnedAction,
-        String invalidReason
+        String invalidReason,
+        String decisionReason
 ) {
 }

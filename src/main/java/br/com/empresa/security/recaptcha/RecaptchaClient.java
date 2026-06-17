@@ -56,13 +56,21 @@ public class RecaptchaClient {
                     .bodyToMono(RecaptchaAssessmentResponse.class)
                     .timeout(Duration.ofMillis(properties.timeoutMs()))
                     .block();
+
         } catch (WebClientResponseException ex) {
             log.warn(
-                    "recaptcha_create_assessment_http_error status={} response={}",
+                    "recaptcha_create_assessment_http_error status={}",
+                    ex.getStatusCode().value()
+            );
+
+            log.warn(
+                    "recaptcha_create_assessment_http_error_response status={} response={}",
                     ex.getStatusCode().value(),
                     compact(ex.getResponseBodyAsString())
             );
+
             throw new RuntimeException("reCAPTCHA assessment request failed", ex);
+
         } catch (RuntimeException ex) {
             log.warn("recaptcha_create_assessment_error error={}", ex.getMessage());
             throw new RuntimeException("reCAPTCHA assessment request failed", ex);
@@ -92,20 +100,30 @@ public class RecaptchaClient {
                     .switchIfEmpty(Mono.empty())
                     .timeout(Duration.ofMillis(properties.timeoutMs()))
                     .block();
+
         } catch (WebClientResponseException ex) {
             log.warn(
-                    "recaptcha_annotate_http_error assessment_id={} status={} response={}",
+                    "recaptcha_annotate_http_error assessment_id={} status={}",
+                    assessmentId,
+                    ex.getStatusCode().value()
+            );
+
+            log.debug(
+                    "recaptcha_annotate_http_error_response assessment_id={} status={} response={}",
                     assessmentId,
                     ex.getStatusCode().value(),
                     compact(ex.getResponseBodyAsString())
             );
+
             throw new RuntimeException("reCAPTCHA annotation request failed", ex);
+
         } catch (RuntimeException ex) {
             log.warn(
                     "recaptcha_annotate_error assessment_id={} error={}",
                     assessmentId,
                     ex.getMessage()
             );
+
             throw new RuntimeException("reCAPTCHA annotation request failed", ex);
         }
     }
@@ -118,6 +136,10 @@ public class RecaptchaClient {
         if (value == null) {
             return "";
         }
-        return value.replace('\n', ' ').replace('\r', ' ').trim();
+
+        return value
+                .replace('\n', ' ')
+                .replace('\r', ' ')
+                .trim();
     }
 }

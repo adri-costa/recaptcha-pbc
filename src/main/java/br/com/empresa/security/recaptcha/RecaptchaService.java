@@ -27,8 +27,8 @@ public class RecaptchaService {
             String userIpAddress
     ) {
         if (token == null || token.isBlank()) {
-            return new RecaptchaValidationResult(
-                    RecaptchaDecision.DENY,
+            return deny(
+                    null,
                     null,
                     null,
                     null,
@@ -38,6 +38,7 @@ public class RecaptchaService {
         }
 
         RecaptchaAssessmentResponse assessment;
+
         try {
             assessment = recaptchaClient.createAssessment(
                     token,
@@ -45,28 +46,15 @@ public class RecaptchaService {
                     userAgent,
                     userIpAddress
             );
+
         } catch (RuntimeException ex) {
             log.warn("recaptcha_assessment_error action={} error={}", expectedAction, ex.getMessage());
-            return new RecaptchaValidationResult(
-                    RecaptchaDecision.ERROR,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
+            return error(null);
         }
 
         if (assessment == null) {
             log.warn("recaptcha_assessment_null action={}", expectedAction);
-            return new RecaptchaValidationResult(
-                    RecaptchaDecision.ERROR,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
-            );
+            return error(null);
         }
 
         var tokenProperties = assessment.tokenProperties();
@@ -93,59 +81,120 @@ public class RecaptchaService {
                 riskAnalysis != null ? riskAnalysis.reasons() : null
         );
 
+        if (challenge == null || challenge.isBlank()) {
+            log.info(
+                    "recaptcha_challenge_empty assessment_id={} action_expected={} score={}",
+                    assessmentId,
+                    expectedAction,
+                    score
+            );
+        }
+
         if (!Boolean.TRUE.equals(tokenValid)) {
-            return new RecaptchaValidationResult(
-                    RecaptchaDecision.DENY,
+            return deny(
                     assessmentId,
                     score,
                     challenge,
                     returnedAction,
-                    invalidReason
+                    invalidReason,
+                    "TOKEN_INVALID"
             );
         }
 
         if (returnedAction == null || !returnedAction.equalsIgnoreCase(expectedAction)) {
-            return new RecaptchaValidationResult(
-                    RecaptchaDecision.DENY,
+            return deny(
                     assessmentId,
                     score,
                     challenge,
                     returnedAction,
+                    invalidReason,
                     "ACTION_MISMATCH"
             );
         }
 
-        if (properties.expectedHostname() != null
-                && !properties.expectedHostname().isBlank()
-                && (hostname == null || !hostname.equalsIgnoreCase(properties.expectedHostname()))) {
-            return new RecaptchaValidationResult(
-                    RecaptchaDecision.DENY,
+        if (isHostnameMismatch(hostname)) {
+            return deny(
                     assessmentId,
                     score,
                     challenge,
                     returnedAction,
+                    invalidReason,
                     "HOSTNAME_MISMATCH"
             );
         }
 
         if ("FAIL".equalsIgnoreCase(challenge)) {
-            return new RecaptchaValidationResult(
-                    RecaptchaDecision.DENY,
+            return deny(
                     assessmentId,
                     score,
                     challenge,
                     returnedAction,
+                    invalidReason,
                     "CHALLENGE_FAILED"
             );
         }
 
+        return allow(
+                assessmentId,
+                score,
+                challenge,
+                returnedAction,
+                invalidReason
+        );
+    }
+
+    private boolean isHostnameMismatch(String hostname) {
+        return properties.expectedHostname() != null
+                && !properties.expectedHostname().isBlank()
+                && (hostname == null || !hostname.equalsIgnoreCase(properties.expectedHostname()));
+    }
+
+    private RecaptchaValidationResult allow(
+            String assessmentId,
+            Double score,
+            String challenge,
+            String returnedAction,
+            String invalidReason
+    ) {
         return new RecaptchaValidationResult(
                 RecaptchaDecision.ALLOW,
                 assessmentId,
                 score,
                 challenge,
                 returnedAction,
-                invalidReason
+                invalidReason,
+                "VALID_RECAPTCHA_ASSESSMENT"
+        );
+    }
+
+    private RecaptchaValidationResult deny(
+            String assessmentId,
+            Double score,
+            String challenge,
+            String returnedAction,
+            String invalidReason,
+            String decisionReason
+    ) {
+        return new RecaptchaValidationResult(
+                RecaptchaDecision.DENY,
+                assessmentId,
+                score,
+                challenge,
+                returnedAction,
+                invalidReason,
+                decisionReason
+        );
+    }
+
+    private RecaptchaValidationResult error(String assessmentId) {
+        return new RecaptchaValidationResult(
+                RecaptchaDecision.ERROR,
+                assessmentId,
+                null,
+                null,
+                null,
+                null,
+                "RECAPTCHA_UNAVAILABLE"
         );
     }
 }

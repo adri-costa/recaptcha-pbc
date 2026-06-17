@@ -69,14 +69,16 @@ public class RecaptchaController {
 
         /*
          * Real authentication must happen here:
+         *
          * - credential validation
          * - MFA or other step-up controls
          * - session issuance
          * - audit trail
          *
          * Never authenticate a user only because reCAPTCHA passed.
+         *
          * After your application reaches a final outcome, annotate the
-         * assessment as LEGITIMATE or FRAUDULENT to improve your model.
+         * assessment as LEGITIMATE or FRAUDULENT to improve the model.
          */
 
         return ResponseEntity.ok(new RecaptchaApiResponse(
