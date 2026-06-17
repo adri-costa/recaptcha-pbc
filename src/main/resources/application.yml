@@ -1,19 +1,9 @@
-server:
-  port: 8080
-
-spring:
-  application:
-    name: recaptcha-policy-based-challenge-demo
-
 recaptcha:
   project-id: ${RECAPTCHA_PROJECT_ID}
   site-key: ${RECAPTCHA_SITE_KEY}
   api-key: ${RECAPTCHA_API_KEY}
   expected-hostname: ${RECAPTCHA_EXPECTED_HOSTNAME:localhost}
-  timeout-ms: ${RECAPTCHA_TIMEOUT_MS:3000}
-  trust-proxy-headers: ${RECAPTCHA_TRUST_PROXY_HEADERS:false}
-  annotations-enabled: ${RECAPTCHA_ANNOTATIONS_ENABLED:false}
+  timeout-ms: 10000
 
-logging:
-  level:
-    br.com.empresa.security.recaptcha: INFO
+server:
+  port: 8080
