@@ -1,0 +1,9 @@
+recaptcha:
+  project-id: ${RECAPTCHA_PROJECT_ID}
+  site-key: ${RECAPTCHA_SITE_KEY}
+  api-key: ${RECAPTCHA_API_KEY}
+  expected-hostname: ${RECAPTCHA_EXPECTED_HOSTNAME:localhost}
+  timeout-ms: 10000
+
+server:
+  port: 8080

@@ -32,6 +32,7 @@ public class Application {
     }
 }
 
+// Controlador REST para lidar com as requisições de 'login' e do reCAPTCHA.
 @RestController
 class RecaptchaController {
 
@@ -59,8 +60,8 @@ class RecaptchaController {
     }
 
     /*
-     * FRONTEND envia username, password e recaptchaToken para cá.
-     * BACKEND chama o Google e cria a assessment.
+     * FRONTEND envia username, password e recaptchaToken para o BACKEND.
+     * BACKEND chama o Google e cria o assessment.
      */
     @PostMapping("/api/auth/login")
     public ResponseEntity<Map<String, Object>> login(
@@ -117,7 +118,7 @@ class RecaptchaController {
         );
 
         /*
-         * Validações mínimas.
+         * Validações do token e outras propriedades.
          */
         if (!tokenValid) {
             return deny("Token inválido", assessment.name(), score, challenge, reasons);
@@ -137,8 +138,8 @@ class RecaptchaController {
         }
 
         /*
-         * Aqui entraria a autenticação real da aplicação.
-         * Este exemplo só mostra o reCAPTCHA.
+         * Aqui entra a autenticação da aplicação.
+         * Nste exemplo só mostra o reCAPTCHA, não loga na aplicação.
          */
         return ResponseEntity.ok(Map.of(
                 "decision", "ALLOW",

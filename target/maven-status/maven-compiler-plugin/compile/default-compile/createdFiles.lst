@@ -1,0 +1,7 @@
+br\com\empresa\security\recaptcha\TokenProperties.class
+br\com\empresa\security\recaptcha\RecaptchaProperties.class
+br\com\empresa\security\recaptcha\RecaptchaController.class
+br\com\empresa\security\recaptcha\LoginRequest.class
+br\com\empresa\security\recaptcha\RiskAnalysis.class
+br\com\empresa\security\recaptcha\RecaptchaAssessment.class
+br\com\empresa\security\recaptcha\Application.class
